@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+data/*.ics
+data/*.json
+.env
+# NEVER commit Firebase keys
+*firebase-adminsdk*.json
+serviceAccount*.json
+service-account*.json

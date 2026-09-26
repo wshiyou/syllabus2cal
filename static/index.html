@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syllabus2Cal</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --card: #fff; --ink: #1c1b19; --muted: #6b6860; --line: #e4e1da; --soft: #f1efea;
+    --accent: #2f5bea; --accent-ink: #fff; --warn-bg: #fff6e0; --warn: #8a5a00; --ok: #1f8a4c;
+    --err-bg: #fdecea; --err: #a3261a; --today: #2f5bea;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151514; --card: #1f1f1d; --ink: #edebe6; --muted: #9c998f; --line: #34332f; --soft: #262624;
+      --accent: #6d8cff; --accent-ink: #0d0d0c; --warn-bg: #33290f; --warn: #f0c46b; --ok: #5fcf8e;
+      --err-bg: #3a1a16; --err: #ff9d90; --today: #6d8cff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 80px; }
+  .top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  .top h1 { font-size: 24px; margin: 0; letter-spacing: -0.02em; }
+  .top .calname { font-size: 18px; font-weight: 600; border: 1px solid transparent; background: transparent; padding: 4px 8px; border-radius: 8px; min-width: 120px; }
+  .top .calname:hover, .top .calname:focus { border-color: var(--line); background: var(--card); }
+  .top .spacer { flex: 1; }
+  .saved { font-size: 13px; color: var(--muted); }
+  .saved.ok { color: var(--ok); }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+  .step { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 10px; }
+  .drop { border: 2px dashed var(--line); border-radius: 12px; padding: 22px 16px; text-align: center; cursor: pointer; transition: .15s; }
+  .drop.over, .drop:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); }
+  .drop b { color: var(--accent); }
+  .files { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .pill { background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 13px; }
+  .pill button { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 0 0 4px; }
+  textarea, input, select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+  textarea { width: 100%; min-height: 70px; margin-top: 12px; resize: vertical; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-top: 12px; }
+  label.f { display: flex; flex-direction: column; font-size: 12px; color: var(--muted); gap: 4px; }
+  label.chk { display: flex; gap: 6px; align-items: center; font-size: 14px; }
+  .btn { font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: 9px 16px; cursor: pointer; background: var(--accent); color: var(--accent-ink); text-decoration: none; display: inline-block; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .btn.danger { background: transparent; color: var(--err); border: 1px solid var(--line); }
+  .btn.sm { padding: 5px 10px; font-size: 13px; }
+  .btn:disabled { opacity: .5; cursor: wait; }
+  .banner { background: var(--warn-bg); color: var(--warn); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; font-size: 14px; }
+  .banner.err { background: var(--err-bg); color: var(--err); }
+  .banner.ok { background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--ok); }
+  .banner ul { margin: 4px 0 0; padding-left: 18px; }
+  .hidden { display: none !important; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -2px; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid var(--line); }
+  .tab { border: 0; background: none; font: inherit; font-weight: 600; color: var(--muted); padding: 8px 14px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab.on { color: var(--ink); border-color: var(--accent); }
+
+  /* calendar */
+  .calbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .calbar h2 { font-size: 18px; margin: 0 8px; min-width: 150px; }
+  .legend { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+  .legend button { font: inherit; font-size: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 2px 10px 2px 6px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+  .legend button.off { opacity: .4; text-decoration: line-through; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+  .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .dow { font-size: 11px; font-weight: 600; color: var(--muted); text-align: center; padding: 6px 0; background: var(--soft); border-bottom: 1px solid var(--line); }
+  .cell { min-height: 108px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 4px; cursor: pointer; position: relative; }
+  .cell:nth-child(7n) { border-right: 0; }
+  .cell.out { background: var(--soft); }
+  .cell.out .num { opacity: .45; }
+  .cell:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+  .num { font-size: 12px; font-weight: 600; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
+  .cell.today .num { background: var(--today); color: var(--accent-ink); }
+  .holiday { font-size: 10px; color: var(--muted); font-style: italic; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chip { display: block; width: 100%; text-align: left; font: inherit; font-size: 11px; line-height: 1.35; border: 0; border-radius: 4px; padding: 1px 5px; margin-top: 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
+  .chip.meet { background: color-mix(in srgb, var(--c) 14%, transparent); border-left: 3px solid var(--c); }
+  .chip.ev { background: var(--c); color: #fff; font-weight: 600; }
+  .chip.big { outline: 2px solid color-mix(in srgb, var(--c) 45%, transparent); outline-offset: 1px; }
+  .more { font-size: 11px; color: var(--muted); padding-left: 4px; }
+  .upcoming { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; }
+  .up { flex: none; border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 8px; padding: 6px 10px; font-size: 13px; cursor: pointer; background: var(--card); }
+  .up small { color: var(--muted); display: block; }
+
+  /* course tables */
+  .course { border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .course-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+  .course-head input.code { font-weight: 700; font-size: 17px; width: 130px; }
+  .course-head input.name { flex: 1; min-width: 180px; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+  .meta input { width: 140px; padding: 2px 6px; }
+  h3 { font-size: 14px; margin: 14px 0 6px; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .tbl td { padding: 4px; border-top: 1px solid var(--line); vertical-align: middle; }
+  .tbl input[type=text] { width: 100%; min-width: 90px; }
+  .tbl input[type=time] { width: 120px; }
+  .tbl input[type=date] { width: 145px; }
+  .tbl tr.off { opacity: .4; }
+  .days { display: flex; gap: 3px; }
+  .day { width: 30px; height: 28px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer; }
+  .day.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .x { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; }
+  .ncs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .warns { background: var(--warn-bg); color: var(--warn); border-radius: 10px; padding: 8px 14px; font-size: 13px; margin-top: 12px; }
+  .warns ul { margin: 4px 0; padding-left: 18px; }
+  .scroll { overflow-x: auto; }
+
+  /* share */
+  .export { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: start; }
+  .qrbox { background: #fff; padding: 6px; border-radius: 10px; line-height: 0; }
+  .qrbox svg { width: 190px; height: 190px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
+  .seg button { font: inherit; font-size: 14px; border: 0; background: transparent; color: var(--muted); padding: 7px 14px; cursor: pointer; }
+  .seg button.on { background: var(--accent); color: var(--accent-ink); }
+  .howto { font-size: 14px; color: var(--muted); }
+  .howto b { color: var(--ink); }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+
+  /* modal */
+  dialog { border: 1px solid var(--line); border-radius: 14px; padding: 20px; background: var(--card); color: var(--ink); width: min(440px, calc(100vw - 32px)); }
+  dialog::backdrop { background: rgba(0,0,0,.35); }
+  dialog h3 { margin: 0 0 12px; font-size: 17px; }
+  dialog .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  dialog .fields .full { grid-column: 1 / -1; }
+  dialog input, dialog select { width: 100%; }
+  dialog .foot { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
+  dialog .foot .left { margin-right: auto; }
+  .kv { font-size: 14px; color: var(--muted); margin: 0 0 4px; }
+
+  @media (max-width: 700px) {
+    .export { grid-template-columns: 1fr; }
+    .cell { min-height: 64px; padding: 2px; }
+    .chip { font-size: 9px; padding: 0 3px; }
+    .chip .t { display: none; }
+    .legend { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <h1>📅</h1>
+    <input id="calName" class="calname" value="My Courses" aria-label="Calendar name">
+    <span id="saved" class="saved"></span>
+    <span class="spacer"></span>
+    <button id="copyLink" class="btn ghost sm hidden">🔗 Copy link</button>
+    <button id="newCal" class="btn ghost sm">+ New calendar</button>
+  </div>
+  <p class="sub">Drop in your syllabi — classes, exams and deadlines land on your calendar and your phone. Upload an updated syllabus anytime and changes merge in.</p>
+
+  <div id="demoBanner" class="banner hidden">Demo mode — no <code>GEMINI_API_KEY</code> / <code>ANTHROPIC_API_KEY</code> set, so parsing returns sample data.</div>
+  <div id="notice" class="banner hidden"></div>
+
+  <!-- UPLOAD -->
+  <section class="card">
+    <div class="step" id="uploadTitle">Upload syllabi</div>
+    <div id="drop" class="drop">
+      <div><b>Click or drag files here</b></div>
+      <div style="color:var(--muted);font-size:13px">PDF · Word (.docx) · screenshots — several at once is fine. Re-upload a course's syllabus to update it.</div>
+      <input id="fileInput" type="file" multiple accept=".pdf,.docx,.txt,.md,image/*" hidden>
+    </div>
+    <div id="fileList" class="files"></div>
+    <textarea id="text" placeholder="…or paste syllabus text here"></textarea>
+    <div class="row">
+      <label class="f">Term starts (optional)<input id="termStart" type="date"></label>
+      <label class="f">Term ends (optional)<input id="termEnd" type="date"></label>
+      <label class="chk" style="padding-bottom:10px"><input id="sameCourse" type="checkbox"> All files are the same course</label>
+      <button id="parseBtn" class="btn">Extract schedule</button>
+    </div>
+  </section>
+
+  <!-- CALENDAR + COURSES -->
+  <section id="mainCard" class="card hidden">
+    <div class="tabs">
+      <button class="tab on" data-tab="calendar">Calendar</button>
+      <button class="tab" data-tab="courses">Courses <span id="courseCount"></span></button>
+    </div>
+
+    <div id="tab-calendar">
+      <div id="upcoming" class="upcoming"></div>
+      <div class="calbar">
+        <button class="btn ghost sm" id="prevM">‹</button>
+        <button class="btn ghost sm" id="todayM">Today</button>
+        <button class="btn ghost sm" id="nextM">›</button>
+        <h2 id="monthTitle"></h2>
+        <div id="legend" class="legend"></div>
+      </div>
+      <div id="grid" class="grid"></div>
+      <p style="font-size:12px;color:var(--muted);margin:8px 0 0">Click an item to edit it · click an empty day to add an event · click a class to cancel just that day.</p>
+    </div>
+
+    <div id="tab-courses" class="hidden"><div id="courses"></div></div>
+  </section>
+
+  <!-- PHONE -->
+  <section id="shareCard" class="card hidden">
+    <div class="step">Add to your phone</div>
+    <div class="row" style="margin-top:0">
+      <label class="f">Time zone<input id="tz" type="text" style="width:220px"></label>
+      <label class="chk" style="padding-bottom:8px"><input id="reminders" type="checkbox" checked> Reminders (15 min before class · 1 week + 1 day before exams)</label>
+    </div>
+    <div class="export" style="margin-top:16px">
+      <div>
+        <div class="seg">
+          <button data-mode="subscribe" class="on">Subscribe · auto-updates</button>
+          <button data-mode="import">One-time import</button>
+        </div>
+        <div id="howSub" class="howto">
+          <p><b>iPhone:</b> scan the QR → <i>Subscribe</i>. Your phone re-checks this calendar, so edits here (and re-uploaded syllabi) show up automatically. Speed it up in Settings → Calendar → Accounts → Fetch New Data.</p>
+          <p><b>Google Calendar / Android:</b> <a id="gSub" target="_blank">open this link on a computer</a> to subscribe. Needs a public URL (see note below).</p>
+        </div>
+        <div id="howImp" class="howto hidden">
+          <p><b>iPhone:</b> scan the QR → open in Safari → <i>Add All</i>. This is a snapshot: later edits won't sync.</p>
+          <p><b>Google Calendar:</b> download the .ics → calendar.google.com → Settings → Import.</p>
+          <p><b>Outlook / Mac:</b> double-click the downloaded .ics.</p>
+        </div>
+        <div class="actions">
+          <a id="dl" class="btn ghost sm">Download .ics</a>
+          <a id="sub" class="btn ghost sm">Open webcal link</a>
+        </div>
+        <p style="font-size:12px;color:var(--muted)">Phone must reach <code id="urlText"></code>. Same Wi-Fi works for iPhone; for Google or a flaky network, run a tunnel (ngrok / cloudflared) and set <code>PUBLIC_BASE_URL</code>.</p>
+      </div>
+      <div id="qr" class="qrbox"></div>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlg"><form method="dialog" id="dlgForm"></form></dialog>
+
+<script>
+// ============================================================ constants & helpers
+const DAYS = ["MO","TU","WE","TH","FR","SA","SU"];
+const JS_DOW = ["SU","MO","TU","WE","TH","FR","SA"];
+const CATS = ["final","exam","quiz","assignment","project","presentation","other"];
+const EMOJI = {final:"🔥",exam:"📝",quiz:"✏️",assignment:"📌",project:"🧩",presentation:"🎤",other:"📅"};
+const KINDS = ["lecture","lab","discussion","recitation","seminar","office_hours"];
+const PALETTE = ["#2f5bea","#d8412f","#1f8a4c","#c77700","#7a3fd1","#0f8b8d","#c2327a","#5b6470"];
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pad = n => String(n).padStart(2, "0");
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseD = s => { const [y, m, d] = (s || "").split("-").map(Number); return y ? new Date(y, m - 1, d) : null; };
+const fmtD = s => { const d = parseD(s); return d ? d.toLocaleDateString(undefined, { month: "short", day: "numeric", weekday: "short" }) : "?"; };
+const fmtT = t => { if (!t) return ""; const [h, m] = t.split(":").map(Number); return `${(h % 12) || 12}${m ? ":" + pad(m) : ""}${h < 12 ? "a" : "p"}`; };
+const norm = s => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const cname = c => (c.course_name || c.course_code || "Course").trim();
+const KIND_LABEL = { lecture: "", lab: "Lab", discussion: "Discussion", recitation: "Recitation", seminar: "Seminar", office_hours: "Office Hours" };
+const colorOf = c => PALETTE[(c.color ?? 0) % PALETTE.length];
+
+// ============================================================ state & persistence
+let cal = { id: null, name: "My Courses", courses: [], timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York", reminders: true };
+let files = [];
+let view = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })();
+let hidden = new Set();          // course indexes hidden in the calendar view
+let saveTimer = null, shareData = null, shareMode = "subscribe";
+
+function setSaved(txt, ok) { const el = $("#saved"); el.textContent = txt; el.classList.toggle("ok", !!ok); }
+
+async function persist() {
+  const body = JSON.stringify({ name: cal.name, courses: cal.courses, timezone: cal.timezone, reminders: cal.reminders });
+  try {
+    setSaved("Saving…");
+    if (!cal.id) {
+      const r = await fetch("/api/calendars", { method: "POST", headers: { "Content-Type": "application/json" }, body });
+      const d = await r.json(); if (!r.ok) throw new Error(d.detail);
+      cal.id = d.id;
+      history.replaceState(null, "", "?c=" + cal.id);
+      try { localStorage.setItem("s2c:last", cal.id); } catch {}
+      loadShare();
+    } else {
+      const r = await fetch("/api/calendars/" + cal.id, { method: "PUT", headers: { "Content-Type": "application/json" }, body });
+      const d = await r.json(); if (!r.ok) throw new Error(d.detail);
+    }
+    setSaved("✓ Saved — phone syncs on next refresh", true);
+  } catch (e) { setSaved("⚠ Not saved: " + e.message); }
+}
+function changed({ courses = true, calendar = true } = {}) {
+  if (courses) renderCourses();
+  if (calendar) renderCalendar();
+  updateVisibility();
+  clearTimeout(saveTimer); saveTimer = setTimeout(persist, 600);
+}
+
+async function boot() {
+  $("#tz").value = cal.timezone;
+  fetch("/api/status").then(r => r.json()).then(s => s.demo_mode && $("#demoBanner").classList.remove("hidden"));
+  let id = new URLSearchParams(location.search).get("c");
+  if (!id) try { id = localStorage.getItem("s2c:last"); } catch {}
+  if (id) {
+    try {
+      const r = await fetch("/api/calendars/" + id);
+      if (r.ok) {
+        cal = { ...cal, ...(await r.json()) };
+        history.replaceState(null, "", "?c=" + cal.id);
+        $("#calName").value = cal.name; $("#tz").value = cal.timezone; $("#reminders").checked = cal.reminders;
+        setSaved("✓ Saved", true);
+        jumpToTerm();
+        loadShare();
+      }
+    } catch {}
+  }
+  renderCourses(); renderCalendar(); updateVisibility();
+}
+
+function updateVisibility() {
+  const has = cal.courses.length > 0;
+  $("#mainCard").classList.toggle("hidden", !has);
+  $("#shareCard").classList.toggle("hidden", !has || !cal.id);
+  $("#copyLink").classList.toggle("hidden", !cal.id);
+  $("#courseCount").textContent = has ? `(${cal.courses.length})` : "";
+  $("#uploadTitle").textContent = has ? "Add or update courses" : "Upload syllabi";
+}
+
+function jumpToTerm() {   // show the month that matters: today if inside a term, else first term month
+  const today = ymd(new Date());
+  const starts = cal.courses.map(c => c.term_start).filter(Boolean).sort();
+  const ends = cal.courses.map(c => c.term_end).filter(Boolean).sort();
+  if (starts.length && (today < starts[0] || today > ends[ends.length - 1])) {
+    const d = parseD(starts[0]); view = new Date(d.getFullYear(), d.getMonth(), 1);
+  }
+}
+
+$("#calName").oninput = e => { cal.name = e.target.value || "My Courses"; changed({ courses: false, calendar: false }); };
+$("#tz").onchange = e => { cal.timezone = e.target.value.trim(); changed({ courses: false, calendar: false }); };
+$("#reminders").onchange = e => { cal.reminders = e.target.checked; changed({ courses: false, calendar: false }); };
+$("#newCal").onclick = () => {
+  if (cal.courses.length && !confirm("Start a new, empty calendar? The current one stays saved at its link.")) return;
+  try { localStorage.removeItem("s2c:last"); } catch {}
+  location.href = location.pathname;
+};
+$("#copyLink").onclick = async () => {
+  try { await navigator.clipboard.writeText(location.href); $("#copyLink").textContent = "✓ Copied"; }
+  catch { prompt("Copy this link:", location.href); }
+  setTimeout(() => $("#copyLink").textContent = "🔗 Copy link", 1500);
+};
+
+function notice(html, kind = "ok") {
+  const n = $("#notice"); n.className = "banner " + kind; n.innerHTML = html;
+  n.onclick = () => n.classList.add("hidden");
+}
+
+// ============================================================ upload & parse
+const drop = $("#drop"), fileInput = $("#fileInput");
+drop.onclick = () => fileInput.click();
+fileInput.onchange = () => { addFiles(fileInput.files); fileInput.value = ""; };
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); addFiles(e.dataTransfer.files); };
+document.addEventListener("paste", e => {
+  if (e.target.closest("dialog")) return;
+  const imgs = [...(e.clipboardData?.files || [])].filter(f => f.type.startsWith("image/"));
+  if (imgs.length) { e.preventDefault(); addFiles(imgs); }
+});
+function addFiles(list) { files.push(...list); renderFiles(); }
+function renderFiles() {
+  $("#fileList").innerHTML = files.map((f, i) =>
+    `<span class="pill">${esc(f.name || "pasted-image")}<button data-rm="${i}">✕</button></span>`).join("");
+}
+$("#fileList").onclick = e => { if (e.target.dataset.rm) { files.splice(+e.target.dataset.rm, 1); renderFiles(); } };
+
+$("#parseBtn").onclick = async () => {
+  const btn = $("#parseBtn");
+  const text = $("#text").value.trim();
+  if (!files.length && !text) { notice("Upload a file or paste some text first.", "err"); return; }
+  const jobs = $("#sameCourse").checked || files.length <= 1
+    ? [{ files: [...files], text, label: files[0]?.name || "pasted text" }]
+    : [...files.map(f => ({ files: [f], text: "", label: f.name || "pasted image" })),
+       ...(text ? [{ files: [], text, label: "pasted text" }] : [])];
+
+  let done = 0; let keepText = false;
+  const failed = [], failedFiles = [], reports = [];
+  const status = () => btn.innerHTML = `<span class="spinner"></span>Reading ${done}/${jobs.length}…`;
+  btn.disabled = true; status();
+
+  const runJob = async job => {
+    const fd = new FormData();
+    job.files.forEach(f => fd.append("files", f, f.name || "pasted.png"));
+    fd.append("text", job.text);
+    fd.append("term_start", $("#termStart").value);
+    fd.append("term_end", $("#termEnd").value);
+    try {
+      const r = await fetch("/api/parse", { method: "POST", body: fd });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || r.statusText);
+      reports.push(mergeCourse(data));
+      if (cal.courses.length === 1) jumpToTerm();
+      changed();
+    } catch (e) {
+      failed.push(`${job.label}: ${e.message}`);
+      failedFiles.push(...job.files);
+      if (job.text) keepText = true;
+    } finally { done++; status(); }
+  };
+  const queue = [...jobs];   // max 2 in flight (free-tier rate limits)
+  await Promise.all([0, 1].map(async () => { while (queue.length) await runJob(queue.shift()); }));
+
+  files = failedFiles; renderFiles();
+  if (!keepText) $("#text").value = "";
+  btn.disabled = false; btn.textContent = "Extract schedule";
+
+  let html = reports.map(r => `<div><b>${esc(r.title)}</b>${r.lines.length ? `<ul>${r.lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}</div>`).join("");
+  if (failed.length) html += `<div style="color:var(--err);margin-top:6px"><b>Couldn't parse ${failed.length}:</b><br>${failed.map(esc).join("<br>")}<br>Failed files are still selected — click Extract again to retry.</div>`;
+  if (html) notice(html, failed.length && !reports.length ? "err" : "ok");
+};
+
+// ============================================================ merge (re-upload updates an existing course)
+function normalizeCourse(c) {
+  c.meetings = (c.meetings || []).map(m => ({ include: m.kind !== "office_hours", location: "", ...m, days: m.days || [] }));
+  c.events = (c.events || []).map(e => ({ include: true, start_time: "", end_time: "", location: "", notes: "", ...e }));
+  c.no_class = c.no_class || []; c.warnings = c.warnings || [];
+  delete c.demo;
+  return c;
+}
+function sortEvents(c) { c.events.sort((a, b) => (a.date + (a.start_time || "")).localeCompare(b.date + (b.start_time || ""))); }
+
+function mergeCourse(raw) {
+  const inc = normalizeCourse(raw);
+  const key = norm(inc.course_code) || norm(inc.course_name);
+  const old = cal.courses.find(c => (norm(c.course_code) || norm(c.course_name)) === key);
+  if (!old) {
+    inc.color = cal.courses.reduce((m, c) => Math.max(m, (c.color ?? -1) + 1), 0);
+    sortEvents(inc);
+    cal.courses.push(inc);
+    return { title: `Added ${cname(inc)}`, lines: [`${inc.meetings.length} weekly meeting(s), ${inc.events.length} exam/deadline item(s)`] };
+  }
+  const lines = [];
+  for (const f of ["course_name", "instructor", "term_start", "term_end"]) {
+    if (inc[f] && inc[f] !== old[f]) { if (f.startsWith("term")) lines.push(`${f.replace("_", " ")}: ${old[f] || "—"} → ${inc[f]}`); old[f] = inc[f]; }
+  }
+  if (inc.meetings.length) {
+    const sig = m => `${m.kind} ${[...m.days].sort().join("")} ${m.start_time}-${m.end_time} ${m.location}`;
+    const before = old.meetings.map(sig).sort().join("|"), after = inc.meetings.map(sig).sort().join("|");
+    if (before !== after) lines.push("Weekly class schedule updated");
+    old.meetings = inc.meetings;
+  }
+  for (const nc of inc.no_class) {
+    if (!old.no_class.some(o => o.start === nc.start && o.end === nc.end)) { old.no_class.push(nc); lines.push(`No class: ${nc.reason || ""} ${nc.start}`); }
+  }
+  for (const e of inc.events) {
+    const match = old.events.find(o => norm(o.title) === norm(e.title) && !o._matched);
+    if (match) {
+      match._matched = true;
+      const moved = match.date !== e.date || (e.start_time && match.start_time !== e.start_time);
+      if (moved) lines.push(`${e.title}: ${fmtD(match.date)} ${fmtT(match.start_time)} → ${fmtD(e.date)} ${fmtT(e.start_time)}`);
+      Object.assign(match, { date: e.date, start_time: e.start_time || match.start_time, end_time: e.end_time || match.end_time,
+                             location: e.location || match.location, notes: e.notes || match.notes, category: e.category });
+    } else { old.events.push({ ...e, _matched: true }); lines.push(`New: ${e.title} (${fmtD(e.date)})`); }
+  }
+  old.events.forEach(e => delete e._matched);
+  old.warnings = inc.warnings;
+  sortEvents(old);
+  if (!lines.length) lines.push("No changes found — already up to date");
+  return { title: `Updated ${cname(old)}`, lines };
+}
+
+// ============================================================ occurrences (what the calendar shows)
+function occurrences(from, to) {  // from/to: "YYYY-MM-DD" inclusive
+  const out = [];
+  cal.courses.forEach((c, ci) => {
+    if (hidden.has(ci)) return;
+    const color = colorOf(c);
+    const skip = new Map();
+    for (const nc of c.no_class) {
+      let d = parseD(nc.start), e = parseD(nc.end || nc.start);
+      if (!d) continue; e = e || d;
+      for (; d <= e; d.setDate(d.getDate() + 1)) skip.set(ymd(d), nc.reason || "No class");
+    }
+    c.meetings.forEach((m, mi) => {
+      if (!m.include || !m.start_time || !c.term_start || !c.term_end) return;
+      const start = c.term_start > from ? c.term_start : from, end = c.term_end < to ? c.term_end : to;
+      for (let d = parseD(start); d && ymd(d) <= end; d.setDate(d.getDate() + 1)) {
+        const k = ymd(d);
+        if (m.days.includes(JS_DOW[d.getDay()]) && !skip.has(k))
+          out.push({ type: "meet", ci, mi, date: k, time: m.start_time, color,
+                     label: `${cname(c)}${KIND_LABEL[m.kind] ? " · " + KIND_LABEL[m.kind] : ""}` });
+      }
+    });
+    c.events.forEach((e, ei) => {
+      if (!e.include || !e.date || e.date < from || e.date > to) return;
+      out.push({ type: "ev", ci, ei, date: e.date, time: e.start_time || "", color, big: ["final", "exam"].includes(e.category),
+                 label: `${EMOJI[e.category] || "📅"} ${e.title} · ${cname(c)}` });
+    });
+    for (const [k, reason] of skip) if (k >= from && k <= to) out.push({ type: "off", ci, date: k, label: `${cname(c)}: ${reason}` });
+  });
+  return out.sort((a, b) => (a.date + (a.time || "99")).localeCompare(b.date + (b.time || "99")));
+}
+
+// ============================================================ calendar view
+function renderCalendar() {
+  $("#monthTitle").textContent = `${MONTHS[view.getMonth()]} ${view.getFullYear()}`;
+  $("#legend").innerHTML = cal.courses.map((c, ci) =>
+    `<button data-leg="${ci}" class="${hidden.has(ci) ? "off" : ""}"><span class="dot" style="background:${colorOf(c)}"></span>${esc(cname(c))}</button>`).join("");
+
+  const first = new Date(view); first.setDate(1 - ((first.getDay() + 6) % 7));   // Monday-start grid
+  const last = new Date(view.getFullYear(), view.getMonth() + 1, 0);
+  const cells = Math.ceil((Math.round((last - first) / 864e5) + 1) / 7) * 7;
+  const lastCell = new Date(first); lastCell.setDate(first.getDate() + cells - 1);
+  const occ = occurrences(ymd(first), ymd(lastCell));
+  const byDay = {}; occ.forEach(o => (byDay[o.date] ||= []).push(o));
+  const today = ymd(new Date());
+
+  let html = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => `<div class="dow">${d}</div>`).join("");
+  for (let i = 0; i < cells; i++) {
+    const d = new Date(first); d.setDate(first.getDate() + i);
+    const k = ymd(d), items = byDay[k] || [];
+    const offs = items.filter(o => o.type === "off"), rest = items.filter(o => o.type !== "off");
+    const MAX = 4;
+    html += `<div class="cell ${d.getMonth() !== view.getMonth() ? "out" : ""} ${k === today ? "today" : ""}" data-date="${k}">
+      <span class="num">${d.getDate()}</span>
+      ${offs.map(o => `<span class="holiday" title="${esc(o.label)}">${esc(o.label)}</span>`).join("")}
+      ${rest.slice(0, MAX).map(o => `<button class="chip ${o.type} ${o.big ? "big" : ""}" style="--c:${o.color}"
+          data-type="${o.type}" data-ci="${o.ci}" data-mi="${o.mi ?? ""}" data-ei="${o.ei ?? ""}" data-date="${k}"
+          title="${esc(o.label)} ${fmtT(o.time)}"><span class="t">${fmtT(o.time)} </span>${esc(o.label)}</button>`).join("")}
+      ${rest.length > MAX ? `<div class="more" data-more="${k}">+${rest.length - MAX} more</div>` : ""}
+    </div>`;
+  }
+  $("#grid").innerHTML = html;
+
+  // coming up: next exams / deadlines
+  const soon = new Date(); soon.setDate(soon.getDate() + 21);
+  const up = occurrences(today, ymd(soon)).filter(o => o.type === "ev").slice(0, 8);
+  $("#upcoming").innerHTML = up.map(o => `<div class="up" style="--c:${o.color}" data-type="ev" data-ci="${o.ci}" data-ei="${o.ei}"><small>${fmtD(o.date)} ${fmtT(o.time)}</small>${esc(o.label)}</div>`).join("");
+}
+$("#prevM").onclick = () => { view = new Date(view.getFullYear(), view.getMonth() - 1, 1); renderCalendar(); };
+$("#nextM").onclick = () => { view = new Date(view.getFullYear(), view.getMonth() + 1, 1); renderCalendar(); };
+$("#todayM").onclick = () => { const d = new Date(); view = new Date(d.getFullYear(), d.getMonth(), 1); renderCalendar(); };
+$("#legend").onclick = e => {
+  const b = e.target.closest("[data-leg]"); if (!b) return;
+  const ci = +b.dataset.leg; hidden.has(ci) ? hidden.delete(ci) : hidden.add(ci); renderCalendar();
+};
+function onCalClick(e) {
+  const chip = e.target.closest("[data-type]");
+  if (chip) {
+    const d = chip.dataset;
+    if (d.type === "ev") return editEvent(+d.ci, +d.ei);
+    if (d.type === "meet") return meetingDialog(+d.ci, +d.mi, d.date);
+  }
+  const more = e.target.closest("[data-more]"); if (more) return dayDialog(more.dataset.more);
+  const hol = e.target.closest(".holiday"); if (hol) return dayDialog(hol.closest(".cell").dataset.date);
+  const cell = e.target.closest(".cell"); if (cell) return editEvent(null, null, cell.dataset.date);
+}
+$("#grid").onclick = onCalClick;
+$("#upcoming").onclick = onCalClick;
+
+// ============================================================ dialogs
+const dlg = $("#dlg"), form = $("#dlgForm");
+function openDialog(html, onAct) {
+  form.innerHTML = html;
+  form.onclick = e => { const a = e.target.closest("[data-act]"); if (a) { e.preventDefault(); onAct(a.dataset.act); } };
+  dlg.showModal();
+}
+const closeDlg = () => dlg.close();
+
+function editEvent(ci, ei, date) {
+  const isNew = ei === null;
+  if (!cal.courses.length) return;
+  const e = isNew ? { title: "", category: "assignment", date, start_time: "", end_time: "", location: "", notes: "" } : cal.courses[ci].events[ei];
+  openDialog(`
+    <h3>${isNew ? "Add event" : "Edit event"}</h3>
+    <div class="fields">
+      <label class="f full">Course<select name="ci" ${isNew ? "" : "disabled"}>${cal.courses.map((c, i) => `<option value="${i}" ${i === (ci ?? 0) ? "selected" : ""}>${esc(cname(c))}</option>`).join("")}</select></label>
+      <label class="f full">Title<input name="title" value="${esc(e.title)}" placeholder="e.g. HW4 due"></label>
+      <label class="f">Type<select name="category">${CATS.map(k => `<option ${k === e.category ? "selected" : ""}>${k}</option>`).join("")}</select></label>
+      <label class="f">Date<input type="date" name="date" value="${esc(e.date)}"></label>
+      <label class="f">Start / due time<input type="time" name="start_time" value="${esc(e.start_time)}"></label>
+      <label class="f">End time<input type="time" name="end_time" value="${esc(e.end_time)}"></label>
+      <label class="f full">Location<input name="location" value="${esc(e.location)}"></label>
+      <label class="f full">Notes<input name="notes" value="${esc(e.notes)}"></label>
+    </div>
+    <div class="foot">
+      ${isNew ? "" : `<button class="btn danger left" data-act="del">Delete</button>`}
+      <button class="btn ghost" data-act="cancel">Cancel</button>
+      <button class="btn" data-act="save">Save</button>
+    </div>`, act => {
+    if (act === "cancel") return closeDlg();
+    const c = cal.courses[isNew ? +form.elements.ci.value : ci];
+    if (act === "del") { c.events.splice(ei, 1); closeDlg(); return changed(); }
+    const f = form.elements;
+    if (!f.title.value.trim() || !f.date.value) { f.title.focus(); return; }
+    const vals = { title: f.title.value.trim(), category: f.category.value, date: f.date.value,
+                   start_time: f.start_time.value, end_time: f.end_time.value, location: f.location.value, notes: f.notes.value };
+    if (isNew) c.events.push({ include: true, manual: true, ...vals }); else Object.assign(e, vals);
+    sortEvents(c); closeDlg(); changed();
+  });
+}
+
+function meetingDialog(ci, mi, date) {
+  const c = cal.courses[ci], m = c.meetings[mi];
+  openDialog(`
+    <h3>${esc(cname(c))} ${esc(KIND_LABEL[m.kind] || "Lecture")}</h3>
+    <p class="kv">${esc(c.course_code || "")}${c.instructor ? " · " + esc(c.instructor) : ""}</p>
+    <p class="kv">${fmtD(date)} · ${fmtT(m.start_time)}–${fmtT(m.end_time)}${m.location ? " · " + esc(m.location) : ""}</p>
+    <p class="kv">Repeats ${m.days.join(", ")} from ${fmtD(c.term_start)} to ${fmtD(c.term_end)}.</p>
+    <div class="foot">
+      <button class="btn danger left" data-act="cancelday">Cancel class this day</button>
+      <button class="btn ghost" data-act="weekly">Edit weekly schedule</button>
+      <button class="btn" data-act="close">Close</button>
+    </div>`, act => {
+    if (act === "close") return closeDlg();
+    if (act === "cancelday") { c.no_class.push({ start: date, end: date, reason: "Cancelled", manual: true }); closeDlg(); return changed(); }
+    if (act === "weekly") { closeDlg(); showTab("courses"); document.querySelectorAll(".course")[ci]?.scrollIntoView({ behavior: "smooth" }); }
+  });
+}
+
+function dayDialog(date) {
+  const occ = occurrences(date, date);
+  openDialog(`
+    <h3>${fmtD(date)}</h3>
+    ${occ.map((o, i) => o.type === "off"
+      ? `<p class="kv">🚫 ${esc(o.label)} <button class="btn ghost sm" data-act="restore:${o.ci}">Restore class</button></p>`
+      : `<button class="chip ${o.type}" style="--c:${o.color};font-size:13px;padding:4px 8px" data-act="open:${i}">${fmtT(o.time)} ${esc(o.label)}</button>`).join("") || `<p class="kv">Nothing scheduled.</p>`}
+    <div class="foot"><button class="btn ghost" data-act="add">+ Add event</button><button class="btn" data-act="close">Close</button></div>`, act => {
+    if (act === "close") return closeDlg();
+    if (act === "add") { closeDlg(); return editEvent(null, null, date); }
+    if (act.startsWith("restore:")) {
+      const c = cal.courses[+act.split(":")[1]];
+      c.no_class = c.no_class.flatMap(n => {       // remove just this date (split ranges)
+        if (!(n.start <= date && date <= (n.end || n.start))) return [n];
+        const parts = [];
+        const prev = parseD(date); prev.setDate(prev.getDate() - 1);
+        const next = parseD(date); next.setDate(next.getDate() + 1);
+        if (n.start < date) parts.push({ ...n, end: ymd(prev) });
+        if ((n.end || n.start) > date) parts.push({ ...n, start: ymd(next) });
+        return parts;
+      });
+      closeDlg(); return changed();
+    }
+    if (act.startsWith("open:")) {
+      const o = occ[+act.split(":")[1]]; closeDlg();
+      return o.type === "ev" ? editEvent(o.ci, o.ei) : meetingDialog(o.ci, o.mi, date);
+    }
+  });
+}
+
+// ============================================================ courses tab (table editor)
+function showTab(name) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.tab === name));
+  $("#tab-calendar").classList.toggle("hidden", name !== "calendar");
+  $("#tab-courses").classList.toggle("hidden", name !== "courses");
+  if (name === "calendar") renderCalendar();
+}
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => showTab(t.dataset.tab));
+
+function renderCourses() {
+  $("#courses").innerHTML = cal.courses.map((c, ci) => `
+  <div class="course">
+    <div class="course-head">
+      <span class="dot" style="background:${colorOf(c)};width:14px;height:14px"></span>
+      <input class="code" data-c="${ci}" data-f="course_code" value="${esc(c.course_code)}">
+      <input class="name" data-c="${ci}" data-f="course_name" value="${esc(c.course_name)}">
+      <button class="x" data-del="${ci}" title="Remove course">🗑</button>
+    </div>
+    <div class="meta">${c.instructor ? esc(c.instructor) + " · " : ""}Term
+      <input type="date" data-c="${ci}" data-f="term_start" value="${esc(c.term_start)}"> →
+      <input type="date" data-c="${ci}" data-f="term_end" value="${esc(c.term_end)}"></div>
+
+    <h3>Weekly classes</h3>
+    <div class="scroll"><table class="tbl">${c.meetings.map((m, i) => `
+      <tr class="${m.include ? "" : "off"}">
+        <td><input type="checkbox" data-c="${ci}" data-k="meetings" data-i="${i}" data-f="include" ${m.include ? "checked" : ""}></td>
+        <td><select data-c="${ci}" data-k="meetings" data-i="${i}" data-f="kind">${KINDS.map(k => `<option ${k === m.kind ? "selected" : ""}>${k}</option>`).join("")}</select></td>
+        <td><div class="days">${DAYS.map(d => `<button class="day ${m.days.includes(d) ? "on" : ""}" data-c="${ci}" data-i="${i}" data-day="${d}">${d}</button>`).join("")}</div></td>
+        <td><input type="time" data-c="${ci}" data-k="meetings" data-i="${i}" data-f="start_time" value="${esc(m.start_time)}"></td>
+        <td><input type="time" data-c="${ci}" data-k="meetings" data-i="${i}" data-f="end_time" value="${esc(m.end_time)}"></td>
+        <td><input type="text" placeholder="Location" data-c="${ci}" data-k="meetings" data-i="${i}" data-f="location" value="${esc(m.location)}"></td>
+        <td><button class="x" data-c="${ci}" data-rmm="${i}">✕</button></td>
+      </tr>`).join("")}</table></div>
+    <div class="actions"><button class="btn ghost sm" data-addm="${ci}">+ Add weekly class</button></div>
+
+    <h3>No-class days</h3>
+    <div class="ncs">${c.no_class.map((n, i) => `<span class="pill">${esc(n.reason || "No class")} · ${esc(n.start)}${n.end && n.end !== n.start ? "–" + esc(n.end) : ""}<button data-c="${ci}" data-rmnc="${i}">✕</button></span>`).join("") || `<span style="font-size:13px;color:var(--muted)">None</span>`}</div>
+
+    <h3>Exams &amp; deadlines</h3>
+    <div class="scroll"><table class="tbl">${c.events.map((e, i) => `
+      <tr class="${e.include ? "" : "off"}">
+        <td><input type="checkbox" data-c="${ci}" data-k="events" data-i="${i}" data-f="include" ${e.include ? "checked" : ""}></td>
+        <td><select data-c="${ci}" data-k="events" data-i="${i}" data-f="category">${CATS.map(k => `<option ${k === e.category ? "selected" : ""}>${k}</option>`).join("")}</select></td>
+        <td><input type="text" data-c="${ci}" data-k="events" data-i="${i}" data-f="title" value="${esc(e.title)}"></td>
+        <td><input type="date" data-c="${ci}" data-k="events" data-i="${i}" data-f="date" value="${esc(e.date)}"></td>
+        <td><input type="time" data-c="${ci}" data-k="events" data-i="${i}" data-f="start_time" value="${esc(e.start_time)}"></td>
+        <td><input type="time" data-c="${ci}" data-k="events" data-i="${i}" data-f="end_time" value="${esc(e.end_time)}"></td>
+        <td><button class="x" data-c="${ci}" data-rmev="${i}">✕</button></td>
+      </tr>`).join("")}</table></div>
+    <div class="actions"><button class="btn ghost sm" data-addev="${ci}">+ Add event</button></div>
+    ${c.warnings.length ? `<div class="warns"><b>Double-check:</b><ul>${c.warnings.map(w => `<li>${esc(w)}</li>`).join("")}</ul></div>` : ""}
+  </div>`).join("");
+}
+
+$("#courses").addEventListener("input", e => {   // edit in place; don't re-render tables (keeps focus)
+  const t = e.target, d = t.dataset; if (d.c === undefined || !d.f) return;
+  const c = cal.courses[+d.c];
+  const obj = d.k ? c[d.k][+d.i] : c;
+  obj[d.f] = t.type === "checkbox" ? t.checked : t.value;
+  if (d.f === "include") t.closest("tr").classList.toggle("off", !t.checked);
+  changed({ courses: false });
+});
+$("#courses").addEventListener("click", e => {
+  const d = e.target.dataset, c = cal.courses[+d.c];
+  if (d.day) {
+    const m = c.meetings[+d.i];
+    m.days = m.days.includes(d.day) ? m.days.filter(x => x !== d.day) : [...m.days, d.day];
+    e.target.classList.toggle("on"); return changed({ courses: false });
+  }
+  if (d.rmev !== undefined) { c.events.splice(+d.rmev, 1); return changed(); }
+  if (d.rmm !== undefined) { c.meetings.splice(+d.rmm, 1); return changed(); }
+  if (d.rmnc !== undefined) { c.no_class.splice(+d.rmnc, 1); return changed(); }
+  if (d.addev !== undefined) { cal.courses[+d.addev].events.push({ include: true, manual: true, category: "other", title: "New event", date: ymd(new Date()), start_time: "", end_time: "" }); return changed(); }
+  if (d.addm !== undefined) { cal.courses[+d.addm].meetings.push({ include: true, kind: "lecture", days: [], start_time: "", end_time: "", location: "" }); return changed(); }
+  if (d.del !== undefined) {
+    const cc = cal.courses[+d.del];
+    if (!confirm(`Remove ${cname(cc)} from this calendar?`)) return;
+    cal.courses.splice(+d.del, 1); hidden.clear(); return changed();
+  }
+});
+
+// ============================================================ share / phone
+async function loadShare() {
+  if (!cal.id) return;
+  try { shareData = await (await fetch(`/api/calendars/${cal.id}/share`)).json(); renderShare(); } catch {}
+}
+function renderShare() {
+  if (!shareData) return;
+  const sub = shareMode === "subscribe";
+  $("#qr").innerHTML = sub ? shareData.qr_subscribe : shareData.qr_import;
+  $("#urlText").textContent = sub ? shareData.webcal : shareData.url;
+  $("#dl").href = shareData.download;
+  $("#sub").href = shareData.webcal;
+  $("#gSub").href = shareData.google_subscribe;
+  $("#howSub").classList.toggle("hidden", !sub);
+  $("#howImp").classList.toggle("hidden", sub);
+  document.querySelectorAll(".seg button").forEach(b => b.classList.toggle("on", b.dataset.mode === shareMode));
+  updateVisibility();
+}
+document.querySelectorAll(".seg button").forEach(b => b.onclick = () => { shareMode = b.dataset.mode; renderShare(); });
+
+boot();
+</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "course_code": "CS 2110",
+  "course_name": "Data Structures & Algorithms",
+  "instructor": "Prof. Rivera",
+  "term_start": "2026-08-31",
+  "term_end": "2026-12-11",
+  "meetings": [
+    {"kind": "lecture", "days": ["MO", "WE"], "start_time": "10:10", "end_time": "11:25", "location": "Hall A 120"},
+    {"kind": "lab", "days": ["FR"], "start_time": "14:00", "end_time": "15:50", "location": "Engineering 204"},
+    {"kind": "office_hours", "days": ["TU"], "start_time": "15:00", "end_time": "16:30", "location": "Gates 310"}
+  ],
+  "no_class": [
+    {"start": "2026-09-07", "end": "2026-09-07", "reason": "Labor Day"},
+    {"start": "2026-10-12", "end": "2026-10-13", "reason": "Fall Break"},
+    {"start": "2026-11-25", "end": "2026-11-27", "reason": "Thanksgiving"}
+  ],
+  "events": [
+    {"title": "HW1 due", "category": "assignment", "date": "2026-09-11", "start_time": "23:59", "end_time": "", "location": "", "notes": "Gradescope"},
+    {"title": "Quiz 1", "category": "quiz", "date": "2026-09-18", "start_time": "14:00", "end_time": "14:30", "location": "Engineering 204", "notes": "Big-O, arrays"},
+    {"title": "HW2 due", "category": "assignment", "date": "2026-09-25", "start_time": "23:59", "end_time": "", "location": "", "notes": ""},
+    {"title": "Midterm 1", "category": "exam", "date": "2026-10-07", "start_time": "10:10", "end_time": "11:25", "location": "Hall A 120", "notes": "20% · Weeks 1–5"},
+    {"title": "Project proposal due", "category": "project", "date": "2026-10-23", "start_time": "", "end_time": "", "location": "", "notes": ""},
+    {"title": "Midterm 2", "category": "exam", "date": "2026-11-11", "start_time": "19:00", "end_time": "21:00", "location": "Auditorium B", "notes": "20% · Evening exam"},
+    {"title": "Final project demo", "category": "presentation", "date": "2026-12-09", "start_time": "10:10", "end_time": "11:25", "location": "Hall A 120", "notes": ""},
+    {"title": "Final Exam", "category": "final", "date": "2026-12-16", "start_time": "09:00", "end_time": "12:00", "location": "TBA", "notes": "30% · Cumulative"}
+  ],
+  "warnings": [
+    "Demo mode: this is sample data. Set GEMINI_API_KEY (free) or ANTHROPIC_API_KEY to parse real syllabi.",
+    "Final exam room is listed as TBA — check the registrar later."
+  ]
+}
