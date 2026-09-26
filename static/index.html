@@ -211,7 +211,7 @@
         </div>
         <div id="howSub" class="howto">
           <p><b>iPhone:</b> scan the QR → <i>Subscribe</i>. Your phone re-checks this calendar, so edits here (and re-uploaded syllabi) show up automatically. Speed it up in Settings → Calendar → Accounts → Fetch New Data.</p>
-          <p><b>Google Calendar / Android:</b> <a id="gSub" target="_blank">open this link on a computer</a> to subscribe. Needs a public URL (see note below).</p>
+          <p><b>Google Calendar / Android:</b> <a id="gSub" target="_blank">open this link on a computer</a> to subscribe.</p>
         </div>
         <div id="howImp" class="howto hidden">
           <p><b>iPhone:</b> scan the QR → open in Safari → <i>Add All</i>. This is a snapshot: later edits won't sync.</p>
@@ -222,7 +222,7 @@
           <a id="dl" class="btn ghost sm">Download .ics</a>
           <a id="sub" class="btn ghost sm">Open webcal link</a>
         </div>
-        <p style="font-size:12px;color:var(--muted)">Phone must reach <code id="urlText"></code>. Same Wi-Fi works for iPhone; for Google or a flaky network, run a tunnel (ngrok / cloudflared) and set <code>PUBLIC_BASE_URL</code>.</p>
+        <p id="netNote" style="font-size:12px;color:var(--muted)"></p>
       </div>
       <div id="qr" class="qrbox"></div>
     </div>
@@ -728,7 +728,10 @@ function renderShare() {
   if (!shareData) return;
   const sub = shareMode === "subscribe";
   $("#qr").innerHTML = sub ? shareData.qr_subscribe : shareData.qr_import;
-  $("#urlText").textContent = sub ? shareData.webcal : shareData.url;
+  const link = esc(sub ? shareData.webcal : shareData.url);
+  $("#netNote").innerHTML = shareData.public
+    ? `✓ Works on any network (Wi-Fi or cellular). Calendar link: <code>${link}</code>`
+    : `Running locally: your phone must be on the same Wi-Fi as this computer to reach <code>${link}</code>. School networks like eduroam often block this; deploy the site or use a tunnel (cloudflared) with <code>PUBLIC_BASE_URL</code>.`;
   $("#dl").href = shareData.download;
   $("#sub").href = shareData.webcal;
   $("#gSub").href = shareData.google_subscribe;

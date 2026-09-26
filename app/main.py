@@ -161,6 +161,7 @@ def share_calendar(cal_id: str, request: Request):
         "qr_import": _qr(url),
         "qr_subscribe": _qr(webcal),
         "google_subscribe": "https://calendar.google.com/calendar/r?cid=" + webcal,
+        "public": bool(os.getenv("PUBLIC_BASE_URL") or os.getenv("RENDER_EXTERNAL_URL")),  # reachable from any network?
     }
 
 

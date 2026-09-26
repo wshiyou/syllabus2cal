@@ -29,13 +29,15 @@ Optional env vars:
 - **Saved calendars**: each calendar lives at `/?c=<id>` (stored in `data/<id>.json`). The `.ics` is rebuilt on every request, so **subscribed** phones pick up edits.
 
 ## Getting it onto a phone
-The QR code points at `/cal/<id>.ics`, so the phone has to be able to reach your laptop:
+**Deployed (see DEPLOY.md, Render + Firestore):** works on any network, nothing to configure.
+
+**Running locally:** the QR code points at `/cal/<id>.ics`, so the phone has to be able to reach your laptop:
 - **Same Wi-Fi:** works as-is. The server detects your LAN IP. Hackathon Wi-Fi often blocks device-to-device traffic, so if the scan doesn't load, use a tunnel:
 - **Tunnel (recommended for the demo):** `ngrok http 8000` or `cloudflared tunnel --url http://localhost:8000`, then restart with `PUBLIC_BASE_URL=<that https url>`.
 
 | Phone | How |
 |---|---|
-| iPhone | Scan the QR with the Camera → Safari → **Add All** |
+| iPhone | Scan the QR → **Subscribe** (auto-updates). "One-time import" → Add All is a snapshot |
 | Android | Google Calendar can't open .ics on the phone itself. On a computer, go to calendar.google.com → Settings → Import. Or subscribe by URL if the server is public. |
 | Subscribe | The `webcal://` link keeps the calendar live-updating (needs a public URL) |
 
