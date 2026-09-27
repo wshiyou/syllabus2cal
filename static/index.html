@@ -9,12 +9,14 @@
     --bg: #f6f5f2; --card: #fff; --ink: #1c1b19; --muted: #6b6860; --line: #e4e1da; --soft: #f1efea;
     --accent: #2f5bea; --accent-ink: #fff; --warn-bg: #fff6e0; --warn: #8a5a00; --ok: #1f8a4c;
     --err-bg: #fdecea; --err: #a3261a; --today: #2f5bea;
+    --w0: #f1efea; --w1: #86b6ef; --w2: #3987e5; --w3: #1c5cab; --w4: #0d366b;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #151514; --card: #1f1f1d; --ink: #edebe6; --muted: #9c998f; --line: #34332f; --soft: #262624;
       --accent: #6d8cff; --accent-ink: #0d0d0c; --warn-bg: #33290f; --warn: #f0c46b; --ok: #5fcf8e;
       --err-bg: #3a1a16; --err: #ff9d90; --today: #6d8cff;
+      --w0: #2a2a28; --w1: #184f95; --w2: #256abf; --w3: #5598e7; --w4: #9ec5f4;
     }
   }
   * { box-sizing: border-box; }
@@ -87,6 +89,24 @@
   .upcoming { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; }
   .up { flex: none; border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 8px; padding: 6px 10px; font-size: 13px; cursor: pointer; background: var(--card); }
   .up small { color: var(--muted); display: block; }
+
+  /* workload heatmap */
+  .workload { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px 10px; margin-bottom: 14px; }
+  .wl-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .wl-head h3 { margin: 0; font-size: 14px; }
+  .wl-sum { font-size: 13px; color: var(--muted); }
+  .wl-legend { margin-left: auto; display: flex; align-items: center; gap: 3px; font-size: 11px; color: var(--muted); }
+  .wl-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .wl-strip { display: flex; gap: 2px; overflow-x: auto; padding: 16px 0 2px; }
+  .wk { flex: 1 0 26px; min-width: 26px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; border: 0; background: none; padding: 0; font: inherit; position: relative; }
+  .wk .sq { width: 100%; height: 34px; border-radius: 4px; background: var(--w0); }
+  .wk.now .sq { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .wk .lbl { font-size: 10px; color: var(--muted); line-height: 1; }
+  .wk .fire { position: absolute; top: -16px; font-size: 12px; }
+  .wk:hover .sq, .wk:focus-visible .sq { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .wl-tip { position: fixed; z-index: 50; pointer-events: none; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.12); max-width: 280px; }
+  .wl-tip b { display: block; margin-bottom: 2px; }
+  .wl-tip div { color: var(--muted); }
 
   /* course tables */
   .course { border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
@@ -183,6 +203,7 @@
     </div>
 
     <div id="tab-calendar">
+      <div id="workload" class="workload"></div>
       <div id="upcoming" class="upcoming"></div>
       <div class="calbar">
         <button class="btn ghost sm" id="prevM">‹</button>
@@ -231,6 +252,7 @@
   </section>
 </main>
 
+<div id="wlTip" class="wl-tip hidden"></div>
 <dialog id="dlg"><form method="dialog" id="dlgForm"></form></dialog>
 
 <script>
@@ -527,6 +549,7 @@ function renderCalendar() {
   // coming up: next exams / deadlines
   const soon = new Date(); soon.setDate(soon.getDate() + 21);
   const up = occurrences(today, ymd(soon)).filter(o => o.type === "ev").slice(0, 8);
+  renderWorkload();
   $("#upcoming").innerHTML = up.map(o => `<div class="up" style="--c:${o.color}" data-type="ev" data-ci="${o.ci}" data-ei="${o.ei}"><small>${fmtD(o.date)} ${fmtT(o.time)}</small>${esc(o.label)}</div>`).join("");
 }
 $("#prevM").onclick = () => { view = new Date(view.getFullYear(), view.getMonth() - 1, 1); renderCalendar(); };
@@ -549,6 +572,94 @@ function onCalClick(e) {
 }
 $("#grid").onclick = onCalClick;
 $("#upcoming").onclick = onCalClick;
+
+// ============================================================ workload heatmap ("hell weeks")
+const WEIGHT = { final: 5, exam: 3, quiz: 2, project: 2, presentation: 2, assignment: 1, other: 1 };
+const monday = d => { const x = new Date(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
+let weeks = [];
+
+function computeWeeks() {
+  const items = [];
+  cal.courses.forEach((c, ci) => {
+    if (hidden.has(ci)) return;
+    c.events.forEach((e, ei) => { if (e.include !== false && e.date) items.push({ ci, ei, e, c }); });
+  });
+  const starts = cal.courses.map(c => c.term_start).filter(Boolean);
+  const ends = cal.courses.map(c => c.term_end).filter(Boolean);
+  const dates = [...starts, ...ends, ...items.map(i => i.e.date)].sort();
+  if (!dates.length) return [];
+  let d = monday(parseD(dates[0]));
+  const last = parseD(dates[dates.length - 1]);
+  const out = [];
+  for (let n = 1; d <= last && n <= 40; n++) {
+    const from = ymd(d), end = new Date(d); end.setDate(end.getDate() + 6);
+    const to = ymd(end);
+    const list = items.filter(i => i.e.date >= from && i.e.date <= to)
+                      .sort((a, b) => (a.e.date + (a.e.start_time || "")).localeCompare(b.e.date + (b.e.start_time || "")));
+    out.push({ n, from, to, list, score: list.reduce((s, i) => s + (WEIGHT[i.e.category] || 1), 0) });
+    d = new Date(d); d.setDate(d.getDate() + 7);
+  }
+  return out;
+}
+const level = s => s === 0 ? 0 : s <= 2 ? 1 : s <= 4 ? 2 : s <= 7 ? 3 : 4;
+const shortRange = w => `${parseD(w.from).toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${parseD(w.to).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+const countBy = list => {
+  const exams = list.filter(i => ["final", "exam"].includes(i.e.category)).length;
+  const other = list.length - exams;
+  return [exams && `${exams} exam${exams > 1 ? "s" : ""}`, other && `${other} other deadline${other > 1 ? "s" : ""}`].filter(Boolean).join(" + ") || "nothing due";
+};
+
+function renderWorkload() {
+  weeks = computeWeeks();
+  const box = $("#workload");
+  if (!weeks.length || !weeks.some(w => w.score)) { box.classList.add("hidden"); return; }
+  box.classList.remove("hidden");
+  // "hell weeks": the top 3 scores, only if clearly heavy (level 3+)
+  const hot = new Set([...weeks].filter(w => level(w.score) >= 3).sort((a, b) => b.score - a.score).slice(0, 3).map(w => w.n));
+  const worst = [...weeks].sort((a, b) => b.score - a.score)[0];
+  const today = ymd(new Date());
+  box.innerHTML = `
+    <div class="wl-head">
+      <h3>Workload by week</h3>
+      <span class="wl-sum">Busiest: <b style="color:var(--ink)">Week ${worst.n}</b> (${shortRange(worst)}) · ${countBy(worst.list)}</span>
+      <span class="wl-legend">Less <i style="background:var(--w0)"></i><i style="background:var(--w1)"></i><i style="background:var(--w2)"></i><i style="background:var(--w3)"></i><i style="background:var(--w4)"></i> More</span>
+    </div>
+    <div class="wl-strip">${weeks.map(w => `
+      <button class="wk ${today >= w.from && today <= w.to ? "now" : ""}" data-wk="${w.n - 1}"
+        aria-label="Week ${w.n}, ${shortRange(w)}: ${countBy(w.list)}">
+        ${hot.has(w.n) ? `<span class="fire" aria-hidden="true">🔥</span>` : ""}
+        <span class="sq" style="background:var(--w${level(w.score)})"></span>
+        <span class="lbl">${w.n}</span>
+      </button>`).join("")}
+    </div>`;
+}
+
+$("#workload").addEventListener("mousemove", e => {
+  const b = e.target.closest("[data-wk]"), tip = $("#wlTip");
+  if (!b) { tip.classList.add("hidden"); return; }
+  const w = weeks[+b.dataset.wk];
+  tip.innerHTML = `<b>Week ${w.n} · ${shortRange(w)}</b>` + (w.list.length
+    ? w.list.slice(0, 6).map(i => `<div>${EMOJI[i.e.category] || "📅"} ${esc(i.e.title)} · ${esc(cname(i.c))}</div>`).join("") + (w.list.length > 6 ? `<div>+${w.list.length - 6} more</div>` : "")
+    : "<div>Nothing due</div>");
+  tip.classList.remove("hidden");
+  const x = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
+  tip.style.left = x + "px"; tip.style.top = (e.clientY + 16) + "px";
+});
+$("#workload").addEventListener("mouseleave", () => $("#wlTip").classList.add("hidden"));
+$("#workload").addEventListener("click", e => {
+  const b = e.target.closest("[data-wk]"); if (!b) return;
+  $("#wlTip").classList.add("hidden");
+  const w = weeks[+b.dataset.wk];
+  const d = parseD(w.from); view = new Date(d.getFullYear(), d.getMonth(), 1); renderCalendar();
+  openDialog(`
+    <h3>Week ${w.n} · ${shortRange(w)}</h3>
+    <p class="kv">${countBy(w.list)}</p>
+    ${w.list.map((i, k) => `<button class="chip ev" style="--c:${colorOf(i.c)};font-size:13px;padding:4px 8px" data-act="open:${k}">${fmtD(i.e.date)} ${fmtT(i.e.start_time)} · ${EMOJI[i.e.category] || "📅"} ${esc(i.e.title)} · ${esc(cname(i.c))}</button>`).join("") || `<p class="kv">Nothing due this week 🎉</p>`}
+    <div class="foot"><button class="btn" data-act="close">Close</button></div>`, act => {
+    if (act === "close") return closeDlg();
+    if (act.startsWith("open:")) { const i = w.list[+act.split(":")[1]]; closeDlg(); editEvent(i.ci, i.ei); }
+  });
+});
 
 // ============================================================ dialogs
 const dlg = $("#dlg"), form = $("#dlgForm");

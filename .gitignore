@@ -7,3 +7,6 @@ data/*.json
 *firebase-adminsdk*.json
 serviceAccount*.json
 service-account*.json
+
+# files Claude drops into the folder (previews etc.)
+Claude outputs/
