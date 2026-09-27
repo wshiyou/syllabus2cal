@@ -408,6 +408,8 @@ $("#parseBtn").onclick = async () => {
     fd.append("text", job.text);
     fd.append("term_start", $("#termStart").value);
     fd.append("term_end", $("#termEnd").value);
+    fd.append("known", JSON.stringify(cal.courses.map(c => ({
+      course_code: c.course_code, course_name: c.course_name, event_titles: c.events.map(e => e.title).slice(0, 40) }))));
     try {
       const r = await fetch("/api/parse", { method: "POST", body: fd });
       const data = await r.json();
@@ -443,10 +445,42 @@ function normalizeCourse(c) {
 }
 function sortEvents(c) { c.events.sort((a, b) => (a.date + (a.start_time || "")).localeCompare(b.date + (b.start_time || ""))); }
 
+// --- matching helpers: an updated syllabus should update the course, not duplicate it ---
+const courseNum = c => (String(c.course_code || "").match(/\d{3,4}/) || [])[0] || "";
+const words = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(w => w.length > 1 && !["and", "of", "the", "to", "in", "for", "intro"].includes(w));
+const jaccard = (a, b) => { const A = new Set(a), B = new Set(b); if (!A.size || !B.size) return 0; let n = 0; A.forEach(x => B.has(x) && n++); return n / (A.size + B.size - n); };
+function findSameCourse(inc) {
+  const exact = cal.courses.find(c => (norm(c.course_code) && norm(c.course_code) === norm(inc.course_code)) ||
+                                      (norm(c.course_name) && norm(c.course_name) === norm(inc.course_name)));
+  if (exact) return exact;
+  const scored = cal.courses.map(c => {
+    let sc = jaccard(words(c.course_name), words(inc.course_name));
+    if (courseNum(c) && courseNum(c) === courseNum(inc)) sc += 0.5;
+    if (c.instructor && inc.instructor && norm(c.instructor) === norm(inc.instructor)) sc += 0.2;
+    return [c, sc];
+  }).sort((a, b) => b[1] - a[1]);
+  const [best, sc] = scored[0] || [];
+  if (!best) return null;
+  if (sc >= 0.7) return best;
+  if (sc >= 0.3 && confirm(`Is this an updated syllabus for "${cname(best)}"?\n\nOK = update that course\nCancel = add it as a new course`)) return best;
+  return null;
+}
+// event titles: "Midterm Exam I" ~ "Midterm 1", "Homework 3" ~ "HW3 due"
+const ROMAN = { i: "1", ii: "2", iii: "3", iv: "4", v: "5" };
+const titleWords = t => String(t || "").toLowerCase().replace(/([a-z])(\d)/g, "$1 $2").replace(/[^a-z0-9]+/g, " ").trim().split(" ")
+  .map(w => ROMAN[w] || ({ homework: "hw", assignment: "hw", problem: "hw", pset: "hw", examination: "exam" })[w] || w)
+  .filter(w => w && !["due", "the", "a", "exam", "no", "set", "submission"].includes(w));
+function titleSim(o, e) {
+  const A = titleWords(o.title), B = titleWords(e.title);
+  const nums = x => x.filter(w => /^\d+$/.test(w)).join(",");
+  if (nums(A) !== nums(B)) return 0;                 // "Midterm 1" must never match "Midterm 2"
+  const group = c => ["final", "exam", "quiz"].includes(c) ? "test" : c;
+  return jaccard(A, B) + (group(o.category) === group(e.category) ? 0.1 : -0.3);
+}
+
 function mergeCourse(raw) {
   const inc = normalizeCourse(raw);
-  const key = norm(inc.course_code) || norm(inc.course_name);
-  const old = cal.courses.find(c => (norm(c.course_code) || norm(c.course_name)) === key);
+  const old = findSameCourse(inc);
   if (!old) {
     inc.color = cal.courses.reduce((m, c) => Math.max(m, (c.color ?? -1) + 1), 0);
     sortEvents(inc);
@@ -467,7 +501,9 @@ function mergeCourse(raw) {
     if (!old.no_class.some(o => o.start === nc.start && o.end === nc.end)) { old.no_class.push(nc); lines.push(`No class: ${nc.reason || ""} ${nc.start}`); }
   }
   for (const e of inc.events) {
-    const match = old.events.find(o => norm(o.title) === norm(e.title) && !o._matched);
+    const free = old.events.filter(o => !o._matched);
+    const match = free.find(o => norm(o.title) === norm(e.title)) ||
+                  free.map(o => [o, titleSim(o, e)]).filter(([, sc]) => sc >= 0.5).sort((x, y) => y[1] - x[1])[0]?.[0];
     if (match) {
       match._matched = true;
       const moved = match.date !== e.date || (e.start_time && match.start_time !== e.start_time);

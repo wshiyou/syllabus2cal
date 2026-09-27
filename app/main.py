@@ -69,6 +69,7 @@ async def parse(
     text: str = Form(default=""),
     term_start: str = Form(default=""),
     term_end: str = Form(default=""),
+    known: str = Form(default=""),
 ):
     if provider() is None:
         demo = demo_result()
@@ -86,7 +87,11 @@ async def parse(
     if not blocks:
         raise HTTPException(400, "Upload a file or paste some text")
     try:
-        return parse_syllabus(blocks, term_start, term_end)
+        try:
+            known_list = json.loads(known) if known else []
+        except ValueError:
+            known_list = []
+        return parse_syllabus(blocks, term_start, term_end, known_list)
     except Exception as e:  # surface API errors to the UI
         raise HTTPException(502, f"LLM parsing failed: {e}")
 

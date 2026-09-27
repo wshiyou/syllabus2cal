@@ -93,10 +93,17 @@ def provider() -> str | None:
     return None
 
 
-def parse_syllabus(blocks: list[dict], term_start: str = "", term_end: str = "") -> dict:
+def parse_syllabus(blocks: list[dict], term_start: str = "", term_end: str = "", known: list | None = None) -> dict:
     hint = "Extract the course schedule from the syllabus above."
     if term_start or term_end:
         hint += f" The student says the term runs {term_start or '?'} to {term_end or '?'}."
+    if known:
+        # Lets a re-uploaded (updated) syllabus line up with what's already saved,
+        # so the app can update in place instead of adding a duplicate course.
+        hint += ("\nCourses already in the student's calendar: " + json.dumps(known, ensure_ascii=False)[:6000] +
+                 "\nIf this syllabus is for one of these courses (e.g. an updated version), copy its course_code and "
+                 "course_name EXACTLY, and reuse the existing event titles for the same items "
+                 "(same exam/assignment = same title, even if its date changed). Use new titles only for genuinely new items.")
     if provider() == "gemini":
         return _parse_gemini(blocks, hint)
     return _parse_claude(blocks, hint)
