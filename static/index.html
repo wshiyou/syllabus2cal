@@ -392,7 +392,8 @@ $("#parseBtn").onclick = async () => {
   const btn = $("#parseBtn");
   const text = $("#text").value.trim();
   if (!files.length && !text) { notice("Upload a file or paste some text first.", "err"); return; }
-  const jobs = $("#sameCourse").checked || files.length <= 1
+  // one job per source: every file AND the pasted text are separate courses (unless "same course" is ticked)
+  const jobs = $("#sameCourse").checked || files.length + (text ? 1 : 0) <= 1
     ? [{ files: [...files], text, label: files[0]?.name || "pasted text" }]
     : [...files.map(f => ({ files: [f], text: "", label: f.name || "pasted image" })),
        ...(text ? [{ files: [], text, label: "pasted text" }] : [])];
@@ -455,7 +456,7 @@ function findSameCourse(inc) {
   if (exact) return exact;
   const scored = cal.courses.map(c => {
     let sc = jaccard(words(c.course_name), words(inc.course_name));
-    if (courseNum(c) && courseNum(c) === courseNum(inc)) sc += 0.5;
+    if (courseNum(c) && courseNum(inc)) sc += courseNum(c) === courseNum(inc) ? 0.5 : -1;  // different course numbers = different courses
     if (c.instructor && inc.instructor && norm(c.instructor) === norm(inc.instructor)) sc += 0.2;
     return [c, sc];
   }).sort((a, b) => b[1] - a[1]);
